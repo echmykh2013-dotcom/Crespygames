@@ -5,7 +5,9 @@
 <title>Invest Sandbox</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+#auth{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}#auth.on{display:flex}#auth .card{width:100%;max-width:380px;margin:0}
 :root{--bg:#eef1f5;--card:#fff;--ink:#14212b;--mute:#6b7a88;--line:#d9e0e8;--g:#0e8f6b;--r:#d2453d;--ac:#2a5bd7;--up:var(--g);--dn:var(--r);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1319;--card:#171f28;--ink:#e6edf4;--mute:#8a9aa9;--line:#27323f;--g:#2ebd85;--r:#f6465d;--ac:#7aa2ff}}
 :root[data-theme="dark"]{--bg:#0e1319;--card:#171f28;--ink:#e6edf4;--mute:#8a9aa9;--line:#27323f;--g:#2ebd85;--r:#f6465d;--ac:#7aa2ff}
@@ -46,14 +48,16 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .stat small{color:var(--mute);display:block}.stat b{font-size:24px;font-variant-numeric:tabular-nums}
 .log div{padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
 .set{display:grid;grid-template-columns:1fr 200px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.mk{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px}@media(max-width:560px){.mk{grid-template-columns:1fr}}
 .dng{background:none;border:1px solid var(--dn);color:var(--dn);border-radius:8px;padding:8px 12px;font:inherit;cursor:pointer}
 #msg{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%}
 #msg.show{opacity:1}
 </style>
 </head>
 <body>
+<div id="auth"><div class="card"><h2>Invest Sandbox</h2><input id="aE" type="email" autocomplete="email" data-ip="email"><input id="aP" type="password" autocomplete="current-password" data-ip="password" style="margin-top:8px"><div class="row"><button class="b wd" id="aIn" data-i="signIn"></button><button class="q" id="aUp" data-i="signUp"></button></div><div class="sub" id="aM" style="margin-top:8px"></div></div></div>
 <header>
-  <div class="top"><span><span class="sub" data-i="total"></span> <b id="hTot"></b></span><span class="sub"><span data-i="withdrawn"></span>: <b id="hWd"></b></span></div>
+  <div class="top"><span><span class="sub" data-i="total"></span> <b id="hTot"></b></span><span class="sub"><span data-i="withdrawn"></span>: <b id="hWd"></b></span><span class="sub" id="net"></span></div>
   <nav id="nav">
     <button data-t="chart" class="on" data-i="chart"></button>
     <button data-t="inv" data-i="inv"></button>
@@ -83,7 +87,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
     </div>
   </div>
 </section>
-<section id="s-inv"><div class="card"><span data-i="cash"></span>: <b id="iCash"></b> &nbsp; <span class="sub"><span data-i="withdrawn"></span>: <b id="iWd"></b></span></div><div class="card" id="invList"></div></section>
+<section id="s-inv"><div class="card"><span data-i="cash"></span>: <b id="iCash"></b> &nbsp; <span class="sub"><span data-i="withdrawn"></span>: <b id="iWd"></b></span></div><div class="card"><h2 data-i="newCoin"></h2>
+  <div class="mk"><input id="mkN" maxlength="20" data-ip="cName"><input id="mkT" maxlength="5" data-ip="cTicker"><input id="mkP" type="number" min="0.01" max="1000" step="any" inputmode="decimal" data-ip="cPrice"></div>
+  <div class="row"><button class="b wd" id="mkBtn" data-i="cBtn"></button></div><div class="sub" style="margin-top:6px" data-i="cHint"></div></div>
+  <div class="card" id="invList"></div></section>
 <section id="s-wallet">
   <div class="stats">
     <div class="stat"><small data-i="invested"></small><b id="wInv"></b></div>
@@ -91,84 +98,105 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
     <div class="stat"><small data-i="withdrawn"></small><b id="wWd"></b></div>
     <div class="stat"><small data-i="capital"></small><b id="wCap"></b></div>
   </div>
-  <div class="card" style="margin-top:14px"><h2 data-i="log"></h2><div class="log" id="log"></div></div>
+  <div class="card" style="margin-top:14px"><h2 data-i="lb"></h2><div class="log" id="lb"></div></div>
+  <div class="card"><h2 data-i="log"></h2><div class="log" id="log"></div></div>
 </section>
 <section id="s-set"><div class="card">
   <div class="set"><label for="sLang" data-i="lang"></label><select id="sLang"><option value="uk">Українська</option><option value="en">English</option></select></div>
   <div class="set"><label for="sTheme" data-i="theme"></label><select id="sTheme"><option value="auto" data-i="tAuto"></option><option value="light" data-i="tLight"></option><option value="dark" data-i="tDark"></option></select></div>
   <div class="set"><label for="sTf" data-i="tf"></label><select id="sTf"><option value="5">5 s</option><option value="15">15 s</option><option value="30">30 s</option></select></div>
   <div class="set"><label for="sRg" data-i="colors"></label><select id="sRg"><option value="0" data-i="gUp"></option><option value="1" data-i="rUp"></option></select></div>
+  <div class="set"><span><span class="sub" data-i="who"></span>: <b id="who"></b></span><button class="dng" id="out" data-i="signOut"></button></div>
   <div class="set"><span data-i="resetT"></span><button class="dng" id="reset" data-i="resetB"></button></div>
 </div></section>
 </main>
 <div id="msg" role="status"></div>
 <script>
 (()=>{'use strict';
-const D={uk:{total:'Усього активів',chart:'Графік',inv:'Інвестиції',wallet:'Гаманець',set:'Налаштування',wdTitle:'Вивести на гаманець',wdBtn:'Вивести',all:'Усе',wdHint:'Виводити можна готівку. «Усього активів» — це готівка, вона не змінюється від цін. Гроші в інвестиціях зростають або падають, доки ви їх не продасте. Виведене лежить у «Виведено» і його можна повернути.',eHint:'Частину коштів виведено: поверніть їх у гру на вкладці «Графік».',avail:'Доступно для виведення',toAssetsT:'1. З інвестицій в активи',toWalletT:'2. З активів на гаманець',toAssets:'Перевести в активи',toHint:'Інвестиції продаються пропорційно за поточною ціною.',oToA:'Переведено в активи',eInv:'В інвестиціях лише',inInv:'В інвестиціях (ціна змінюється)',after:'Після виведення залишиться',capital:'Капітал з виведеним',back:'Повернути в гру',eWd:'На гаманці немає стільки коштів.',oBack:'Повернено в гру',amount:'Сума в $',cash:'Готівка',invested:'У інвестиціях',withdrawn:'Виведено',log:'Історія операцій',noLog:'Поки що порожньо.',lang:'Мова',theme:'Тема екрана',tAuto:'Авто',tLight:'Світла',tDark:'Темна',tf:'Одна свічка',colors:'Кольори графіка',gUp:'Зелений — ріст',rUp:'Червоний — ріст',resetT:'Почати гру спочатку',resetB:'Скинути',confirm:'Скинути гру і почати з $1000?',buy:'Купити',sell:'Продати',crypto:'Криптовалюти',firms:'Компанії',own:'У вас',noInv:'Ви ще нічого не купили. Оберіть актив і купіть його в розділі «Інвестиції».',eAmt:'Введіть суму більше нуля.',eCash:'Недостатньо готівки.',eHave:'У вас менше цього активу.',oBuy:'Куплено',oSell:'Продано',oWd:'Виведено',rst:'Гру скинуто.',cur:'Поточний вибір'},
-en:{total:'Total assets',chart:'Chart',inv:'Investments',wallet:'Wallet',set:'Settings',wdTitle:'Withdraw to wallet',wdBtn:'Withdraw',all:'All',wdHint:'You can withdraw cash. Total assets is your cash and does not move with prices. Money in investments rises or falls until you sell it. Withdrawn funds stay under Withdrawn and can be moved back.',eHint:'Some funds were withdrawn: move them back in the Chart tab.',avail:'Available to withdraw',toAssetsT:'1. From investments to assets',toWalletT:'2. From assets to wallet',toAssets:'Move to assets',toHint:'Investments are sold proportionally at the current price.',oToA:'Moved to assets',eInv:'Only invested:',inInv:'In investments (price changes)',after:'Left after withdrawal',capital:'Capital incl. withdrawn',back:'Move back to game',eWd:'Not enough funds in the wallet.',oBack:'Moved back',amount:'Amount in $',cash:'Cash',invested:'In investments',withdrawn:'Withdrawn',log:'Activity',noLog:'Nothing yet.',lang:'Language',theme:'Screen theme',tAuto:'Auto',tLight:'Light',tDark:'Dark',tf:'One candle',colors:'Chart colors',gUp:'Green — up',rUp:'Red — up',resetT:'Start the game over',resetB:'Reset',confirm:'Reset the game and start with $1000?',buy:'Buy',sell:'Sell',crypto:'Cryptocurrencies',firms:'Companies',own:'You hold',noInv:'You have not bought anything yet. Pick an asset in the Investments tab.',eAmt:'Enter an amount above zero.',eCash:'Not enough cash.',eHave:'You hold less of this asset.',oBuy:'Bought',oSell:'Sold',oWd:'Withdrew',rst:'Game reset.',cur:'Current'}};
-const A=[
-{id:'BTC',n:'Bitcoin',g:'c',p:60000,v:.012},{id:'ETH',n:'Ethereum',g:'c',p:3000,v:.016},{id:'SOL',n:'Solana',g:'c',p:140,v:.024},{id:'DOGE',n:'Dogecoin',g:'c',p:.15,v:.035},
-{id:'NMN',n:'Nova Mining',g:'k',p:42,v:.014},{id:'CHP',n:'ChainPay',g:'k',p:128,v:.01},{id:'ORX',n:'Orbit Exchange',g:'k',p:76,v:.013},{id:'BLF',n:'BlockForge',g:'k',p:19,v:.02},{id:'LMW',n:'Lumen Wallet',g:'k',p:55,v:.011},{id:'ATC',n:'Atlas Capital',g:'k',p:210,v:.008}];
+const sb=supabase.createClient('https://ntvtguzyaexclvmaqxxs.supabase.co','sb_publishable_OkdcjL4hqtlC8L3GVP9bEA_vzIhwZzG');
+const D={uk:{signIn:'Увійти',signUp:'Реєстрація',signOut:'Вийти',email:'Email',password:'Пароль (від 6 символів)',lb:'Таблиця рекордів',checkMail:'Перевірте пошту й підтвердьте email, потім увійдіть.',who:'Акаунт',total:'Усього активів',chart:'Графік',inv:'Інвестиції',wallet:'Гаманець',set:'Налаштування',wdTitle:'Вивести на гаманець',wdBtn:'Вивести',all:'Усе',wdHint:'Виводити можна готівку. «Усього активів» — це готівка, вона не змінюється від цін. Гроші в інвестиціях зростають або падають, доки ви їх не продасте. Виведене лежить у «Виведено» і його можна повернути.',amount:'Сума в $',cash:'Готівка',invested:'У інвестиціях',withdrawn:'Виведено',log:'Історія операцій',noLog:'Поки що порожньо.',lang:'Мова',theme:'Тема екрана',tAuto:'Авто',tLight:'Світла',tDark:'Темна',tf:'Одна свічка',colors:'Кольори графіка',gUp:'Зелений — ріст',rUp:'Червоний — ріст',resetT:'Почати гру спочатку',resetB:'Скинути',confirm:'Скинути гру і почати з $1000?',buy:'Купити',sell:'Продати',crypto:'Криптовалюти',firms:'Компанії',user:'Монети гравців',own:'У вас',noInv:'Ви ще нічого не купили. Оберіть актив і купіть його в розділі «Інвестиції».',eAmt:'Введіть суму більше нуля.',eCash:'Недостатньо готівки.',eHave:'У вас менше цього активу.',oBuy:'Куплено',oSell:'Продано',oWd:'Виведено',rst:'Гру скинуто.',eHint:'Частину коштів виведено: поверніть їх у гру на вкладці «Графік».',capital:'Капітал з виведеним',back:'Повернути в гру',eWd:'На гаманці немає стільки коштів.',oBack:'Повернено в гру',avail:'Доступно для виведення',toAssetsT:'1. З інвестицій в активи',toWalletT:'2. З активів на гаманець',toAssets:'Перевести в активи',toHint:'Інвестиції продаються пропорційно за поточною ціною.',oToA:'Переведено в активи',eInv:'В інвестиціях лише',inInv:'В інвестиціях (ціна змінюється)',after:'Після виведення залишиться',newCoin:'Створити свою монету',cName:'Назва',cTicker:'Тікер (2–5)',cPrice:'Стартова ціна $',cBtn:'Створити за $50',cHint:'Монету побачать усі гравці. Графік у всіх однаковий.',eName:'Назва: 2–20 символів.',eTick:'Тікер: 2–5 літер чи цифр, і він має бути вільним.',ePrice:'Ціна від 0.01 до 1000.',eNoDb:'Спільний сервер недоступний (потрібен вхід у claude.ai і право редагування).',oMk:'Монету створено',by:'від',you:'вас',online:'Онлайн',offline:'Лише ціни'},
+en:{signIn:'Sign In',signUp:'Sign Up',signOut:'Sign Out',email:'Email',password:'Password (6+ characters)',lb:'Leaderboard',checkMail:'Check your email and confirm it, then sign in.',who:'Account',total:'Total assets',chart:'Chart',inv:'Investments',wallet:'Wallet',set:'Settings',wdTitle:'Withdraw to wallet',wdBtn:'Withdraw',all:'All',wdHint:'You can withdraw cash. Total assets is your cash and does not move with prices. Money in investments rises or falls until you sell it. Withdrawn funds stay under Withdrawn and can be moved back.',amount:'Amount in $',cash:'Cash',invested:'In investments',withdrawn:'Withdrawn',log:'Activity',noLog:'Nothing yet.',lang:'Language',theme:'Screen theme',tAuto:'Auto',tLight:'Light',tDark:'Dark',tf:'One candle',colors:'Chart colors',gUp:'Green — up',rUp:'Red — up',resetT:'Start the game over',resetB:'Reset',confirm:'Reset the game and start with $1000?',buy:'Buy',sell:'Sell',crypto:'Cryptocurrencies',firms:'Companies',user:'Player coins',own:'You hold',noInv:'You have not bought anything yet. Pick an asset in the Investments tab.',eAmt:'Enter an amount above zero.',eCash:'Not enough cash.',eHave:'You hold less of this asset.',oBuy:'Bought',oSell:'Sold',oWd:'Withdrew',rst:'Game reset.',eHint:'Some funds were withdrawn: move them back in the Chart tab.',capital:'Capital incl. withdrawn',back:'Move back to game',eWd:'Not enough funds in the wallet.',oBack:'Moved back',avail:'Available to withdraw',toAssetsT:'1. From investments to assets',toWalletT:'2. From assets to wallet',toAssets:'Move to assets',toHint:'Investments are sold proportionally at the current price.',oToA:'Moved to assets',eInv:'Only invested:',inInv:'In investments (price changes)',after:'Left after withdrawal',newCoin:'Create your own coin',cName:'Name',cTicker:'Ticker (2–5)',cPrice:'Start price $',cBtn:'Create for $50',cHint:'Every player will see your coin. Everyone sees the same chart.',eName:'Name: 2–20 characters.',eTick:'Ticker: 2–5 letters or digits, and it must be free.',ePrice:'Price from 0.01 to 1000.',eNoDb:'Shared server unavailable (sign in to claude.ai with edit access).',oMk:'Coin created',by:'by',you:'you',online:'Online',offline:'Prices only'}};
 const $=i=>document.getElementById(i);
+const esc=x=>String(x).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const fm=n=>'$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fp=p=>p<1?'$'+p.toFixed(4):fm(p);
-function fresh(){const q={},m={};A.forEach(a=>{q[a.id]=0;let p=a.p,c=[];for(let i=0;i<40;i++){const o=p;let h=p,l=p;for(let k=0;k<5;k++){p*=1+(Math.random()-.495)*a.v;h=Math.max(h,p);l=Math.min(l,p)}c.push({o,h,l,c:p})}m[a.id]={p,c,cur:{o:p,h:p,l:p,c:p},n:0}});return{cash:1000,wd:0,q,m,log:[],set:{lang:'en',theme:'auto',tf:5,rg:0}}}
-function hs(x){let a=0xdeadbeef,b=0x41c6ce57;const z=x+'|k9#sandbox';for(let i=0;i<z.length;i++){const c=z.charCodeAt(i);a=Math.imul(a^c,2654435761);b=Math.imul(b^c,1597334677)}a=Math.imul(a^(a>>>16),2246822507)^Math.imul(b^(b>>>13),3266489909);b=Math.imul(b^(b>>>16),2246822507)^Math.imul(a^(a>>>13),3266489909);return(4294967296*(2097151&b)+(a>>>0)).toString(36)}
-let S;try{const raw=localStorage.getItem('ig1');if(raw&&localStorage.getItem('ig1h')===hs(raw))S=JSON.parse(raw)}catch(e){}
-if(!S||!S.m||!Number.isFinite(S.cash)||S.cash<0||!Number.isFinite(S.wd)||S.wd<0)S=fresh();
-if(!S.set.li){S.set.lang='en';S.set.li=1}
-const save=()=>{try{const raw=JSON.stringify(S);localStorage.setItem('ig1',raw);localStorage.setItem('ig1h',hs(raw))}catch(e){}};
-const t=k=>D[S.set.lang][k]||k;
-let tab='chart',sel='BTC';
-const val=()=>A.reduce((s,a)=>s+S.q[a.id]*S.m[a.id].p,0);
-let tm;function toast(x){const m=$('msg');m.textContent=x;m.classList.add('show');clearTimeout(tm);tm=setTimeout(()=>m.classList.remove('show'),2500)}
-function log(x){S.log.unshift(new Date().toLocaleTimeString(S.set.lang,{hour:'2-digit',minute:'2-digit'})+' · '+x);S.log=S.log.slice(0,50)}
-function owned(){return A.filter(a=>S.q[a.id]>0)}
-function chips(){const o=owned(),l=o.length?o:A;if(!l.find(a=>a.id===sel))sel=l[0].id;
-  $('chips').innerHTML=l.map(a=>`<button class="chip ${a.id===sel?'on':''}" data-id="${a.id}">${a.id}</button>`).join('')+(o.length?'':`<span class="sub" style="align-self:center">${t('noInv')}</span>`)}
-function chart(){const a=A.find(x=>x.id===sel),s=S.m[sel],cs=[...s.c.slice(-39),s.cur];
+let ST={lang:'en',theme:'auto',tf:5,rg:0};try{Object.assign(ST,JSON.parse(localStorage.getItem('ig2s')))}catch(e){}
+const saveS=()=>{try{localStorage.setItem('ig2s',JSON.stringify(ST))}catch(e){}};
+const t=k=>D[ST.lang][k]||k;
+let AL=[],P={cash:0,wd:0},H={},LOG=[],USER=null,tab='chart',sel='BTC';
+const Q=id=>H[id]||0;
+/* Same price formula as the server (price_at in SQL) */
+const FQ=[.0003,.0011,.0047,.021,.09,.35,1.3,2.9],AM=[.5,.35,.25,.18,.12,.08,.05,.04];
+function pr(a,t){let x=0;for(let i=0;i<8;i++)x+=AM[i]*Math.sin(FQ[i]*t+a.ph[i]);return Math.max(a.p*.02,a.p*Math.exp(a.v*8*x))}
+const now=()=>Math.floor(Date.now()/1000);
+const px=a=>pr(a,now());
+function cndl(a,tf,n){const nw=now(),end=nw-nw%tf,out=[];for(let i=n-1;i>=0;i--){const st=end-i*tf,last=Math.min(st+tf-1,nw);let o=pr(a,st-1),c=pr(a,st),h=Math.max(o,c),l=Math.min(o,c);for(let k=st+1;k<=last;k++){c=pr(a,k);h=Math.max(h,c);l=Math.min(l,c)}out.push({o,h,l,c})}return out}
+const val=()=>AL.reduce((s,a)=>s+Q(a.id)*px(a),0);
+let tm;function toast(x){const m=$('msg');m.textContent=x;m.classList.add('show');clearTimeout(tm);tm=setTimeout(()=>m.classList.remove('show'),3500)}
+function log(x){LOG.unshift(new Date().toLocaleTimeString(ST.lang,{hour:'2-digit',minute:'2-digit'})+' · '+x);LOG=LOG.slice(0,50)}
+const owned=()=>AL.filter(a=>Q(a.id)>0);
+function em(m){m=m||'';return m.includes('not enough cash')?t('eCash'):m.includes('not enough asset')?t('eHave'):m.includes('not enough invested')?t('eInv'):m.includes('not enough in wallet')?t('eWd'):m.includes('ticker')?t('eTick'):m.includes('bad name')?t('eName'):m.includes('bad price')?t('ePrice'):m}
+async function call(name,args,ok){const{error}=await sb.rpc(name,args);if(error){toast(em(error.message));return false}await refresh();if(ok){log(ok);toast(ok)}return true}
+function chips(){if(!AL.length)return;const o=owned(),l=o.length?o:AL;if(!l.find(a=>a.id===sel))sel=l[0].id;
+  $('chips').innerHTML=l.map(a=>`<button class="chip ${a.id===sel?'on':''}" data-id="${esc(a.id)}">${esc(a.id)}</button>`).join('')+(o.length?'':`<span class="sub" style="align-self:center">${t('noInv')}</span>`)}
+function chart(){const a=AL.find(x=>x.id===sel);if(!a)return;const cs=cndl(a,ST.tf,40),p=cs[cs.length-1].c;
   let mn=Math.min(...cs.map(c=>c.l)),mx=Math.max(...cs.map(c=>c.h));const pd=(mx-mn)*.1||mx*.01;mn-=pd;mx+=pd;
-  const W=640,H=320,R=70,cw=(W-R)/cs.length,y=v=>H-(v-mn)/(mx-mn)*H;let g='';
+  const W=640,H2=320,R=70,cw=(W-R)/cs.length,y=v=>H2-(v-mn)/(mx-mn)*H2;let g='';
   for(let i=1;i<5;i++){const v=mn+(mx-mn)*i/5,yy=y(v);g+=`<line x1="0" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="var(--line)"/><text x="${W-R+6}" y="${yy+4}" font-size="11" fill="var(--mute)">${fp(v)}</text>`}
   cs.forEach((c,i)=>{const x=i*cw+cw/2,up=c.c>=c.o,col=up?'var(--up)':'var(--dn)',top=y(Math.max(c.o,c.c)),bh=Math.max(1,Math.abs(y(c.o)-y(c.c)));
-    g+=`<line x1="${x}" x2="${x}" y1="${y(c.h)}" y2="${y(c.l)}" stroke="${col}"/><rect x="${x-cw*.35}" y="${top}" width="${cw*.7}" height="${bh}" fill="${col}"/>`});
-  const ly=y(s.p),lc=s.cur.c>=s.cur.o?'var(--up)':'var(--dn)';
-  g+=`<line x1="0" x2="${W-R}" y1="${ly}" y2="${ly}" stroke="${lc}" stroke-dasharray="4 3"/><rect x="${W-R}" y="${ly-9}" width="${R}" height="18" fill="${lc}"/><text x="${W-R+5}" y="${ly+4}" font-size="11" fill="#fff">${fp(s.p)}</text>`;
-  $('ch').innerHTML=g;$('cTitle').textContent=a.n+' · '+a.id;$('cPrice').textContent=fp(s.p);
-  $('cHave').textContent=S.q[sel]>0?`${t('own')}: ${S.q[sel].toFixed(6)} ≈ ${fm(S.q[sel]*s.p)}`:''}
-function stats(){const v=val(),T=fm(S.cash);$('hTot').textContent=T;$('wTot').textContent=T;$('wInv').textContent=fm(v);$('wWd').textContent=fm(S.wd);$('hWd').textContent=fm(S.wd);$('iCash').textContent=fm(S.cash);$('iWd').textContent=fm(S.wd);$('wCap').textContent=fm(S.cash+v+S.wd);$('wdCash').textContent=fm(S.cash);$('wdInv').textContent=fm(v);prev()}
-function logv(){$('log').innerHTML=S.log.length?S.log.map(l=>`<div>${l}</div>`).join(''):`<div class="sub">${t('noLog')}</div>`}
-function invBuild(){const grp=(g,n)=>`<h3>${t(n)}</h3>`+A.filter(a=>a.g===g).map(a=>`<div class="asset"><div class="ah"><div><b>${a.n}</b> <span class="sub">${a.id}</span><div class="sub" id="o-${a.id}"></div></div><div class="r"><b id="p-${a.id}"></b><div id="c-${a.id}"></div></div></div><div class="ctl"><input type="number" min="0" step="any" inputmode="decimal" id="i-${a.id}" placeholder="${t('amount')}"><button class="b buy" data-a="buy" data-id="${a.id}">${t('buy')}</button><button class="b sell" data-a="sell" data-id="${a.id}">${t('sell')}</button></div></div>`).join('');
-  $('invList').innerHTML=grp('c','crypto')+grp('k','firms');invLive()}
-function invLive(){A.forEach(a=>{const s=S.m[a.id],ch=(s.p/s.c[0].o-1)*100;$('p-'+a.id).textContent=fp(s.p);const e=$('c-'+a.id);e.textContent=(ch>=0?'+':'')+ch.toFixed(2)+'%';e.className=ch>=0?'up':'dn';
-  $('o-'+a.id).textContent=S.q[a.id]>0?`${t('own')}: ${S.q[a.id].toFixed(6)} ≈ ${fm(S.q[a.id]*s.p)}`:''})}
-function prev(){const v=parseFloat($('wamt').value)||0;$('after').textContent=fm(Math.max(0,S.cash-v))}
+    g+=`<line x1="${x}" x2="${x}" y1="${y(c.h)}" y2="${y(c.l)}" stroke="${col}"/><rect x="${x-cw*.4}" y="${top}" width="${cw*.8}" height="${bh}" fill="${col}"/>`});
+  const ly=y(p),k=cs[cs.length-1],lc=k.c>=k.o?'var(--up)':'var(--dn)';
+  g+=`<line x1="0" x2="${W-R}" y1="${ly}" y2="${ly}" stroke="${lc}" stroke-dasharray="4 3"/><rect x="${W-R}" y="${ly-9}" width="${R}" height="18" fill="${lc}"/><text x="${W-R+5}" y="${ly+4}" font-size="11" fill="#fff">${fp(p)}</text>`;
+  $('ch').innerHTML=g;$('cTitle').textContent=a.n+' · '+a.id;$('cPrice').textContent=fp(p);
+  $('cHave').textContent=Q(sel)>0?`${t('own')}: ${Q(sel).toFixed(6)} ≈ ${fm(Q(sel)*p)}`:''}
+function prev(){const v=parseFloat($('wamt').value)||0;$('after').textContent=fm(Math.max(0,P.cash-v))}
+function stats(){const v=val(),T=fm(P.cash);$('hTot').textContent=T;$('wTot').textContent=T;$('wInv').textContent=fm(v);$('wWd').textContent=fm(P.wd);$('hWd').textContent=fm(P.wd);$('iCash').textContent=fm(P.cash);$('iWd').textContent=fm(P.wd);$('wCap').textContent=fm(P.cash+v+P.wd);$('wdCash').textContent=fm(P.cash);$('wdInv').textContent=fm(v);prev();$('net').textContent='● Online'}
+function logv(){$('log').innerHTML=LOG.length?LOG.map(l=>`<div>${esc(l)}</div>`).join(''):`<div class="sub">${t('noLog')}</div>`}
+async function lb(){const{data}=await sb.rpc('leaderboard');$('lb').innerHTML=(data||[]).map((r,i)=>`<div>${i+1}. ${esc(r.name)} — <b>${fm(+r.total)}</b></div>`).join('')}
+function invBuild(){const grp=(g,n)=>{const l=AL.filter(a=>a.g===g);return l.length?`<h3>${t(n)}</h3>`+l.map(a=>`<div class="asset"><div class="ah"><div><b>${esc(a.n)}</b> <span class="sub">${esc(a.id)}</span><div class="sub" id="o-${esc(a.id)}"></div></div><div class="r"><b id="p-${esc(a.id)}"></b><div id="c-${esc(a.id)}"></div></div></div><div class="ctl"><input type="number" min="0" step="any" inputmode="decimal" id="i-${esc(a.id)}" placeholder="${t('amount')}"><button class="b buy" data-a="buy" data-id="${esc(a.id)}">${t('buy')}</button><button class="b sell" data-a="sell" data-id="${esc(a.id)}">${t('sell')}</button></div></div>`).join(''):''};
+  $('invList').innerHTML=grp('c','crypto')+grp('k','firms')+grp('u','user');invLive()}
+function invLive(){const n=now();AL.forEach(a=>{const e=$('c-'+a.id);if(!e)return;const p=pr(a,n),ch=(p/pr(a,n-300)-1)*100;$('p-'+a.id).textContent=fp(p);e.textContent=(ch>=0?'+':'')+ch.toFixed(2)+'% (5m)';e.className=ch>=0?'up':'dn';
+  $('o-'+a.id).textContent=Q(a.id)>0?`${t('own')}: ${Q(a.id).toFixed(6)} ≈ ${fm(Q(a.id)*p)}`:''})}
 function live(){stats();if(tab==='chart')chart();if(tab==='inv')invLive()}
-function tick(){A.forEach(a=>{const s=S.m[a.id];s.p=Math.max(s.p*(1+(Math.random()-.495)*a.v),a.p*.02);const c=s.cur;c.c=s.p;c.h=Math.max(c.h,s.p);c.l=Math.min(c.l,s.p);
-  if(++s.n>=S.set.tf){s.c.push({...c});if(s.c.length>60)s.c.shift();s.cur={o:s.p,h:s.p,l:s.p,c:s.p};s.n=0}});save();live()}
-function lang(){document.documentElement.lang=S.set.lang;document.querySelectorAll('[data-i]').forEach(e=>e.textContent=t(e.dataset.i));document.querySelectorAll('[data-ip]').forEach(e=>e.placeholder=t(e.dataset.ip));
-  document.title=S.set.lang==='uk'?'Інвест-пісочниця':'Invest Sandbox';invBuild();chips();logv();live()}
-function theme(){const r=document.documentElement;S.set.theme==='auto'?r.removeAttribute('data-theme'):r.dataset.theme=S.set.theme;r.dataset.rg=S.set.rg}
-function show(n){tab=n;document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===n));document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id==='s-'+n));if(n==='chart')chips();if(n==='wallet')logv();live()}
+async function refresh(){if(!USER)return;const[a,p,h]=await Promise.all([sb.from('assets').select('*'),sb.from('profiles').select('cash,wd').maybeSingle(),sb.from('holdings').select('asset_id,qty')]);
+  if(a.data){const n=AL.length;AL=a.data.map(r=>({id:r.id,n:r.name,g:r.grp,p:r.base,v:r.vol,ph:r.ph}));if(AL.length!==n||!$('invList').children.length)invBuild();chips()}
+  if(p.data)P={cash:+p.data.cash,wd:+p.data.wd};
+  if(h.data){H={};h.data.forEach(r=>H[r.asset_id]=+r.qty)}
+  live()}
+function lang(){document.documentElement.lang=ST.lang;document.querySelectorAll('[data-i]').forEach(e=>e.textContent=t(e.dataset.i));document.querySelectorAll('[data-ip]').forEach(e=>e.placeholder=t(e.dataset.ip));
+  document.title=ST.lang==='uk'?'Інвест-пісочниця':'Invest Sandbox';invBuild();chips();logv();live()}
+function theme(){const r=document.documentElement;ST.theme==='auto'?r.removeAttribute('data-theme'):r.dataset.theme=ST.theme;r.dataset.rg=ST.rg}
+function show(n){tab=n;document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===n));document.querySelectorAll('section').forEach(x=>x.classList.toggle('on',x.id==='s-'+n));if(n==='chart')chips();if(n==='wallet'){logv();lb()}live()}
 $('nav').onclick=e=>{const b=e.target.closest('button');if(b)show(b.dataset.t)};
 $('chips').onclick=e=>{const b=e.target.closest('.chip');if(b){sel=b.dataset.id;chips();chart()}};
-$('invList').onclick=e=>{const b=e.target.closest('[data-a]');if(!b)return;const id=b.dataset.id,inp=$('i-'+id),v=parseFloat(inp.value);
-  if(!(v>0&&isFinite(v)))return toast(t('eAmt'));const s=S.m[id];
-  if(b.dataset.a==='buy'){if(v>S.cash+1e-9)return toast(`${t('eCash')} ${t('cash')}: ${fm(S.cash)}.`+(S.wd>0?` ${t('eHint')}`:''));S.cash-=v;S.q[id]+=v/s.p;log(`${t('oBuy')} ${id}: ${fm(v)}`);toast(`${t('oBuy')} ${id}: ${fm(v)}`)}
-  else{if(v>S.q[id]*s.p+1e-9)return toast(t('eHave'));S.q[id]=Math.max(0,S.q[id]-v/s.p);if(S.q[id]*s.p<.005)S.q[id]=0;S.cash+=v;log(`${t('oSell')} ${id}: ${fm(v)}`);toast(`${t('oSell')} ${id}: ${fm(v)}`)}
-  inp.value='';save();live()};
+const num=el=>{const v=parseFloat(el.value);if(!(v>0&&isFinite(v))){toast(t('eAmt'));return null}return v};
+$('invList').onclick=async e=>{const b=e.target.closest('[data-a]');if(!b)return;const id=b.dataset.id,inp=$('i-'+id),v=num(inp);if(v==null)return;const buy=b.dataset.a==='buy';
+  if(await call(buy?'buy':'sell',{aid:id,amt:v},`${t(buy?'oBuy':'oSell')} ${id}: ${fm(v)}`))inp.value=''};
 $('tall').onclick=()=>{$('tamt').value=val().toFixed(2)};
-$('toA').onclick=()=>{const v=parseFloat($('tamt').value);if(!(v>0&&isFinite(v)))return toast(t('eAmt'));const inv=val();if(v>inv+1e-9)return toast(`${t('eInv')} ${fm(inv)}.`);const f=Math.min(1,v/inv);A.forEach(a=>{S.q[a.id]*=1-f;if(S.q[a.id]*S.m[a.id].p<.005)S.q[a.id]=0});S.cash+=v;log(`${t('oToA')}: ${fm(v)}`);toast(`${t('oToA')}: ${fm(v)}`);$('tamt').value='';save();chips();live()};
-$('wall').onclick=()=>{$('wamt').value=S.cash.toFixed(2);prev()};$('wamt').oninput=prev;
-$('wd').onclick=()=>{const v=parseFloat($('wamt').value);if(!(v>0&&isFinite(v)))return toast(t('eAmt'));if(v>S.cash+1e-9)return toast(t('eCash'));S.cash-=v;S.wd+=v;log(`${t('oWd')}: ${fm(v)}`);toast(`${t('oWd')}: ${fm(v)} → ${t('wallet')}`);$('wamt').value='';save();live()};
-$('back').onclick=()=>{const v=parseFloat($('wamt').value);if(!(v>0&&isFinite(v)))return toast(t('eAmt'));if(v>S.wd+1e-9)return toast(t('eWd'));S.wd-=v;S.cash+=v;log(`${t('oBack')}: ${fm(v)}`);toast(`${t('oBack')}: ${fm(v)}`);$('wamt').value='';save();live()};
-$('sLang').onchange=e=>{S.set.lang=e.target.value;save();lang()};
-$('sTheme').onchange=e=>{S.set.theme=e.target.value;save();theme()};
-$('sTf').onchange=e=>{S.set.tf=+e.target.value;save()};
-$('sRg').onchange=e=>{S.set.rg=+e.target.value;save();theme()};
-$('reset').onclick=()=>{if(confirm(t('confirm'))){const st=S.set;S=fresh();S.set=st;save();sel='BTC';lang();toast(t('rst'))}};
-$('sLang').value=S.set.lang;$('sTheme').value=S.set.theme;$('sTf').value=S.set.tf;$('sRg').value=S.set.rg;
-theme();lang();setInterval(tick,1000);
+$('toA').onclick=async()=>{const v=num($('tamt'));if(v!=null&&await call('to_assets',{amt:v},`${t('oToA')}: ${fm(v)}`)){$('tamt').value='';chips()}};
+$('wall').onclick=()=>{$('wamt').value=P.cash.toFixed(2);prev()};$('wamt').oninput=prev;
+$('wd').onclick=async()=>{const v=num($('wamt'));if(v!=null&&await call('withdraw',{amt:v},`${t('oWd')}: ${fm(v)}`))$('wamt').value=''};
+$('back').onclick=async()=>{const v=num($('wamt'));if(v!=null&&await call('move_back',{amt:v},`${t('oBack')}: ${fm(v)}`))$('wamt').value=''};
+$('mkBtn').onclick=async()=>{const nm=$('mkN').value.trim(),id=$('mkT').value.trim().toUpperCase(),p=parseFloat($('mkP').value);
+  if(nm.length<2||nm.length>20)return toast(t('eName'));if(!/^[A-Z0-9]{2,5}$/.test(id)||AL.some(a=>a.id===id))return toast(t('eTick'));if(!(p>=.01&&p<=1000))return toast(t('ePrice'));
+  if(await call('create_coin',{tkr:id,nm,startp:p},`${t('oMk')}: ${id}`))$('mkN').value=$('mkT').value=$('mkP').value=''};
+$('sLang').onchange=e=>{ST.lang=e.target.value;saveS();lang()};
+$('sTheme').onchange=e=>{ST.theme=e.target.value;saveS();theme()};
+$('sTf').onchange=e=>{ST.tf=+e.target.value;saveS()};
+$('sRg').onchange=e=>{ST.rg=+e.target.value;saveS();theme()};
+$('reset').onclick=async()=>{if(confirm(t('confirm'))&&await call('reset_game',{}))toast(t('rst'))};
+$('out').onclick=()=>sb.auth.signOut();
+async function auth(up){const email=$('aE').value.trim(),password=$('aP').value;$('aM').textContent='';
+  const r=up?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
+  if(r.error)$('aM').textContent=r.error.message;else if(up&&!r.data.session)$('aM').textContent=t('checkMail')}
+$('aIn').onclick=()=>auth(false);$('aUp').onclick=()=>auth(true);
+function setUser(s){USER=s&&s.user||null;$('auth').classList.toggle('on',!USER);if(USER){$('who').textContent=USER.email;refresh()}else{H={};P={cash:0,wd:0};AL=[];$('invList').innerHTML='';LOG=[]}}
+$('sLang').value=ST.lang;$('sTheme').value=ST.theme;$('sTf').value=ST.tf;$('sRg').value=ST.rg;
+theme();lang();
+sb.auth.getSession().then(({data})=>setUser(data.session));
+sb.auth.onAuthStateChange((_e,s)=>setUser(s));
+sb.channel('assets-live').on('postgres_changes',{event:'*',schema:'public',table:'assets'},()=>refresh()).subscribe();
+setInterval(live,1000);setInterval(()=>{if(USER){refresh();if(tab==='wallet')lb()}},15000);
 })();
 </script>
 </body>
