@@ -176,9 +176,9 @@ function showBan(p){let on=false;if(p.frozen){const perm=!p.ban_until||p.ban_unt
   if(on){$('bD').textContent=perm?t('perm'):Math.max(1,Math.ceil((end-new Date())/864e5));$('bU').textContent=perm?t('perm'):end.toLocaleString(ST.lang,{dateStyle:'medium',timeStyle:'short'});$('bR').textContent=p.ban_reason||'—'}}
   $('ban').classList.toggle('on',on)}
 $('bOut').onclick=()=>sb.auth.signOut();
-async function refresh(){if(!USER)return;const[a,p,h]=await Promise.all([sb.from('assets').select('*'),sb.from('profiles').select('cash,wd,frozen,ban_until,ban_reason').maybeSingle(),sb.from('holdings').select('asset_id,qty')]);
+async function refresh(){if(!USER)return;const[a,p,h]=await Promise.all([sb.from('assets').select('*'),sb.from('profiles').select('*').maybeSingle(),sb.from('holdings').select('asset_id,qty')]);
   if(a.data){const n=AL.length;AL=a.data.map(r=>({id:r.id,n:r.name,g:r.grp,p:r.base,v:r.vol,ph:r.ph}));if(AL.length!==n||!$('invList').children.length)invBuild();chips()}
-  if(p.data){P={cash:+p.data.cash,wd:+p.data.wd};showBan(p.data)}
+  if(p.error)toast(p.error.message);if(p.data){P={cash:+p.data.cash,wd:+p.data.wd};showBan(p.data)}
   if(h.data){H={};h.data.forEach(r=>H[r.asset_id]=+r.qty)}
   live()}
 function lang(){document.documentElement.lang=ST.lang;document.querySelectorAll('[data-i]').forEach(e=>e.textContent=t(e.dataset.i));document.querySelectorAll('[data-ip]').forEach(e=>e.placeholder=t(e.dataset.ip));
@@ -212,7 +212,7 @@ async function poll(){if(!USER||busy)return;busy=1;try{const[m,c]=await Promise.
   if(m.data){M={};m.data.forEach(r=>M[r.id]={p:r.price,p5:r.p5||r.price})}
   if(c.data&&c.data.length){let pc=null;C=c.data.slice(-40).map(r=>{const o=pc==null?r.o:pc;pc=r.c;return{o,h:Math.max(r.h,o),l:Math.min(r.l,o),c:r.c}})}
   live()}catch(e){}busy=0}
-async function prof(){const{data}=await sb.from('profiles').select('name,created_at,frozen').maybeSingle();if(!data)return;$('pN').value=data.name;$('pI').textContent='🛡 '+t(data.frozen?'isacFz':'isacOn');$('pI').className='sub '+(data.frozen?'dn':'up');$('pJ').textContent=new Date(data.created_at).toLocaleDateString(ST.lang);$('pEm').textContent=USER.email;
+async function prof(){const{data}=await sb.from('profiles').select('*').maybeSingle();if(!data)return;$('pN').value=data.name;$('pI').textContent='🛡 '+t(data.frozen?'isacFz':'isacOn');$('pI').className='sub '+(data.frozen?'dn':'up');$('pJ').textContent=new Date(data.created_at).toLocaleDateString(ST.lang);$('pEm').textContent=USER.email;
   const c=await sb.from('trades').select('*',{count:'exact',head:true});$('pT').textContent=c.count||0;
   const l=await sb.rpc('leaderboard');if(l.data){const i=l.data.findIndex(r=>r.name===data.name);$('pR').textContent=i<0?'—':'#'+(i+1)}}
 $('pSave').onclick=async()=>{if(await call('set_name',{nm:$('pN').value.trim()},t('nameSaved')))prof()};
