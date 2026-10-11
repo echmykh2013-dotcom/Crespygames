@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+.ov{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}.ov.on{display:flex}.ov .card{width:100%;max-width:380px;margin:0}
 #auth{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}#auth.on{display:flex}#auth .card{width:100%;max-width:380px;margin:0}
 :root{--bg:#eef1f5;--card:#fff;--ink:#14212b;--mute:#6b7a88;--line:#d9e0e8;--g:#0e8f6b;--r:#d2453d;--ac:#2a5bd7;--up:var(--g);--dn:var(--r);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1319;--card:#171f28;--ink:#e6edf4;--mute:#8a9aa9;--line:#27323f;--g:#2ebd85;--r:#f6465d;--ac:#7aa2ff}}
@@ -56,12 +57,15 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 </head>
 <body>
 <div id="auth"><div class="card"><h2>Invest Sandbox</h2><input id="aE" type="email" autocomplete="email" data-ip="email"><input id="aP" type="password" autocomplete="current-password" data-ip="password" style="margin-top:8px"><div class="row"><button class="b wd" id="aIn" data-i="signIn"></button><button class="q" id="aUp" data-i="signUp"></button></div><div class="sub" id="aM" style="margin-top:8px"></div></div></div>
+<div id="mfa" class="ov"><div class="card"><h2 data-i="mfaLogin"></h2><input id="mC" inputmode="numeric" maxlength="6" data-ip="code"><div class="row"><button class="b wd" id="mBtn" data-i="confirmB"></button><button class="q" id="mOut" data-i="signOut"></button></div><div class="sub" id="mM" style="margin-top:8px"></div></div></div>
+<div id="ban" class="ov"><div class="card" style="text-align:center"><div style="font-size:44px">🚫</div><h2 data-i="banT"></h2><p><span class="sub" data-i="banDays"></span><br><b id="bD" style="font-size:34px"></b></p><p class="sub"><span data-i="banUntil"></span>: <b id="bU"></b></p><p><span class="sub" data-i="banReason"></span><br><b id="bR" style="word-break:break-word"></b></p><div class="sub" data-i="banNote"></div><div class="row"><button class="q" id="bOut" data-i="signOut" style="flex:1"></button></div></div></div>
 <header>
   <div class="top"><span><span class="sub" data-i="total"></span> <b id="hTot"></b></span><span class="sub"><span data-i="withdrawn"></span>: <b id="hWd"></b></span><span class="sub" id="net"></span></div>
   <nav id="nav">
     <button data-t="chart" class="on" data-i="chart"></button>
     <button data-t="inv" data-i="inv"></button>
     <button data-t="wallet" data-i="wallet"></button>
+    <button data-t="prof" data-i="prof"></button>
     <button data-t="set" data-i="set"></button>
   </nav>
 </header>
@@ -101,6 +105,20 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   <div class="card" style="margin-top:14px"><h2 data-i="lb"></h2><div class="log" id="lb"></div></div>
   <div class="card"><h2 data-i="log"></h2><div class="log" id="log"></div></div>
 </section>
+<section id="s-prof">
+  <div class="card"><h2 data-i="prof"></h2>
+    <label class="sub" for="pN" data-i="dName"></label>
+    <div class="ctl" style="grid-template-columns:1fr auto"><input id="pN" maxlength="16"><button class="b wd" id="pSave" data-i="save"></button></div>
+    <div id="pI" class="sub" style="margin-top:10px;font-weight:700"></div>
+    <div class="stats" style="margin-top:12px">
+      <div class="stat"><small>Email</small><b id="pEm" style="font-size:15px;word-break:break-all"></b></div>
+      <div class="stat"><small data-i="joined"></small><b id="pJ" style="font-size:18px"></b></div>
+      <div class="stat"><small data-i="trades"></small><b id="pT"></b></div>
+      <div class="stat"><small data-i="rank"></small><b id="pR"></b></div>
+    </div></div>
+  <div class="card"><h2 data-i="sec"></h2><div id="mS" class="sub" style="margin-bottom:8px"></div><div id="mBox"></div>
+    <div class="row"><button class="b wd" id="mEn" data-i="mfaEn"></button><button class="dng" id="mDis" data-i="mfaDis"></button></div></div>
+</section>
 <section id="s-set"><div class="card">
   <div class="set"><label for="sLang" data-i="lang"></label><select id="sLang"><option value="uk">Українська</option><option value="en">English</option></select></div>
   <div class="set"><label for="sTheme" data-i="theme"></label><select id="sTheme"><option value="auto" data-i="tAuto"></option><option value="light" data-i="tLight"></option><option value="dark" data-i="tDark"></option></select></div>
@@ -114,8 +132,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 <script>
 (()=>{'use strict';
 const sb=supabase.createClient('https://ntvtguzyaexclvmaqxxs.supabase.co','sb_publishable_OkdcjL4hqtlC8L3GVP9bEA_vzIhwZzG');
-const D={uk:{signIn:'Увійти',signUp:'Реєстрація',signOut:'Вийти',email:'Email',password:'Пароль (від 6 символів)',lb:'Таблиця рекордів',checkMail:'Перевірте пошту й підтвердьте email, потім увійдіть.',who:'Акаунт',total:'Усього активів',chart:'Графік',inv:'Інвестиції',wallet:'Гаманець',set:'Налаштування',wdTitle:'Вивести на гаманець',wdBtn:'Вивести',all:'Усе',wdHint:'Виводити можна готівку. «Усього активів» — це готівка, вона не змінюється від цін. Гроші в інвестиціях зростають або падають, доки ви їх не продасте. Виведене лежить у «Виведено» і його можна повернути.',amount:'Сума в $',cash:'Готівка',invested:'У інвестиціях',withdrawn:'Виведено',log:'Історія операцій',noLog:'Поки що порожньо.',lang:'Мова',theme:'Тема екрана',tAuto:'Авто',tLight:'Світла',tDark:'Темна',tf:'Одна свічка',colors:'Кольори графіка',gUp:'Зелений — ріст',rUp:'Червоний — ріст',resetT:'Почати гру спочатку',resetB:'Скинути',confirm:'Скинути гру і почати з $1000?',buy:'Купити',sell:'Продати',crypto:'Криптовалюти',firms:'Компанії',user:'Монети гравців',own:'У вас',noInv:'Ви ще нічого не купили. Оберіть актив і купіть його в розділі «Інвестиції».',eAmt:'Введіть суму більше нуля.',eCash:'Недостатньо готівки.',eHave:'У вас менше цього активу.',oBuy:'Куплено',oSell:'Продано',oWd:'Виведено',rst:'Гру скинуто.',eHint:'Частину коштів виведено: поверніть їх у гру на вкладці «Графік».',capital:'Капітал з виведеним',back:'Повернути в гру',eWd:'На гаманці немає стільки коштів.',oBack:'Повернено в гру',avail:'Доступно для виведення',toAssetsT:'1. З інвестицій в активи',toWalletT:'2. З активів на гаманець',toAssets:'Перевести в активи',toHint:'Інвестиції продаються пропорційно за поточною ціною.',oToA:'Переведено в активи',eInv:'В інвестиціях лише',inInv:'В інвестиціях (ціна змінюється)',after:'Після виведення залишиться',newCoin:'Створити свою монету',cName:'Назва',cTicker:'Тікер (2–5)',cPrice:'Стартова ціна $',cBtn:'Створити за $50',cHint:'Монету побачать усі гравці. Графік у всіх однаковий.',eName:'Назва: 2–20 символів.',eTick:'Тікер: 2–5 літер чи цифр, і він має бути вільним.',ePrice:'Ціна від 0.01 до 1000.',eNoDb:'Спільний сервер недоступний (потрібен вхід у claude.ai і право редагування).',oMk:'Монету створено',by:'від',you:'вас',online:'Онлайн',offline:'Лише ціни'},
-en:{signIn:'Sign In',signUp:'Sign Up',signOut:'Sign Out',email:'Email',password:'Password (6+ characters)',lb:'Leaderboard',checkMail:'Check your email and confirm it, then sign in.',who:'Account',total:'Total assets',chart:'Chart',inv:'Investments',wallet:'Wallet',set:'Settings',wdTitle:'Withdraw to wallet',wdBtn:'Withdraw',all:'All',wdHint:'You can withdraw cash. Total assets is your cash and does not move with prices. Money in investments rises or falls until you sell it. Withdrawn funds stay under Withdrawn and can be moved back.',amount:'Amount in $',cash:'Cash',invested:'In investments',withdrawn:'Withdrawn',log:'Activity',noLog:'Nothing yet.',lang:'Language',theme:'Screen theme',tAuto:'Auto',tLight:'Light',tDark:'Dark',tf:'One candle',colors:'Chart colors',gUp:'Green — up',rUp:'Red — up',resetT:'Start the game over',resetB:'Reset',confirm:'Reset the game and start with $1000?',buy:'Buy',sell:'Sell',crypto:'Cryptocurrencies',firms:'Companies',user:'Player coins',own:'You hold',noInv:'You have not bought anything yet. Pick an asset in the Investments tab.',eAmt:'Enter an amount above zero.',eCash:'Not enough cash.',eHave:'You hold less of this asset.',oBuy:'Bought',oSell:'Sold',oWd:'Withdrew',rst:'Game reset.',eHint:'Some funds were withdrawn: move them back in the Chart tab.',capital:'Capital incl. withdrawn',back:'Move back to game',eWd:'Not enough funds in the wallet.',oBack:'Moved back',avail:'Available to withdraw',toAssetsT:'1. From investments to assets',toWalletT:'2. From assets to wallet',toAssets:'Move to assets',toHint:'Investments are sold proportionally at the current price.',oToA:'Moved to assets',eInv:'Only invested:',inInv:'In investments (price changes)',after:'Left after withdrawal',newCoin:'Create your own coin',cName:'Name',cTicker:'Ticker (2–5)',cPrice:'Start price $',cBtn:'Create for $50',cHint:'Every player will see your coin. Everyone sees the same chart.',eName:'Name: 2–20 characters.',eTick:'Ticker: 2–5 letters or digits, and it must be free.',ePrice:'Price from 0.01 to 1000.',eNoDb:'Shared server unavailable (sign in to claude.ai with edit access).',oMk:'Coin created',by:'by',you:'you',online:'Online',offline:'Prices only'}};
+const D={uk:{banT:'Ваш акаунт заблоковано',banDays:'Залишилось днів',banUntil:'Блокування до',banReason:'Причина',perm:'назавжди',banNote:'Якщо вважаєте, що це помилка, зверніться до адміністратора.',eFrozen:'ISAC заморозив ваш акаунт через підозрілу активність.',eIsac:'ISAC заблокував цю дію.',isacOn:'ISAC: акаунт під захистом',isacFz:'ISAC: акаунт заморожено',prof:'Профіль',dName:'Відображуване ім\'я',save:'Зберегти',joined:'Дата реєстрації',trades:'Угод',rank:'Місце в рейтингу',sec:'Двофакторна автентифікація (2FA)',mfaOn:'2FA увімкнено',mfaOff:'2FA вимкнено',mfaEn:'Увімкнути 2FA',mfaDis:'Вимкнути 2FA',mfaScan:'Скануйте QR-код у Google Authenticator чи Authy, потім введіть 6-значний код.',code:'Код з додатка',confirmB:'Підтвердити',mfaLogin:'Введіть код 2FA',nameSaved:'Ім\'я збережено',eFast:'Занадто швидко, зачекайте мить.',eCoins:'Ліміт: 3 власні монети.',eMfa:'Потрібен код 2FA: увійдіть знову.',eTaken:'Це ім\'я вже зайняте.',eBadName:'Ім\'я: 3–16 символів (літери, цифри, _).',mfaDone:'2FA увімкнено',signIn:'Увійти',signUp:'Реєстрація',signOut:'Вийти',email:'Email',password:'Пароль (від 6 символів)',lb:'Таблиця рекордів',checkMail:'Перевірте пошту й підтвердьте email, потім увійдіть.',who:'Акаунт',total:'Усього активів',chart:'Графік',inv:'Інвестиції',wallet:'Гаманець',set:'Налаштування',wdTitle:'Вивести на гаманець',wdBtn:'Вивести',all:'Усе',wdHint:'Виводити можна готівку. «Усього активів» — це готівка, вона не змінюється від цін. Гроші в інвестиціях зростають або падають, доки ви їх не продасте. Виведене лежить у «Виведено» і його можна повернути.',amount:'Сума в $',cash:'Готівка',invested:'У інвестиціях',withdrawn:'Виведено',log:'Історія операцій',noLog:'Поки що порожньо.',lang:'Мова',theme:'Тема екрана',tAuto:'Авто',tLight:'Світла',tDark:'Темна',tf:'Одна свічка',colors:'Кольори графіка',gUp:'Зелений — ріст',rUp:'Червоний — ріст',resetT:'Почати гру спочатку',resetB:'Скинути',confirm:'Скинути гру і почати з $1000?',buy:'Купити',sell:'Продати',crypto:'Криптовалюти',firms:'Компанії',user:'Монети гравців',own:'У вас',noInv:'Ви ще нічого не купили. Оберіть актив і купіть його в розділі «Інвестиції».',eAmt:'Введіть суму більше нуля.',eCash:'Недостатньо готівки.',eHave:'У вас менше цього активу.',oBuy:'Куплено',oSell:'Продано',oWd:'Виведено',rst:'Гру скинуто.',eHint:'Частину коштів виведено: поверніть їх у гру на вкладці «Графік».',capital:'Капітал з виведеним',back:'Повернути в гру',eWd:'На гаманці немає стільки коштів.',oBack:'Повернено в гру',avail:'Доступно для виведення',toAssetsT:'1. З інвестицій в активи',toWalletT:'2. З активів на гаманець',toAssets:'Перевести в активи',toHint:'Інвестиції продаються пропорційно за поточною ціною.',oToA:'Переведено в активи',eInv:'В інвестиціях лише',inInv:'В інвестиціях (ціна змінюється)',after:'Після виведення залишиться',newCoin:'Створити свою монету',cName:'Назва',cTicker:'Тікер (2–5)',cPrice:'Стартова ціна $',cBtn:'Створити за $50',cHint:'Монету побачать усі гравці. Графік у всіх однаковий.',eName:'Назва: 2–20 символів.',eTick:'Тікер: 2–5 літер чи цифр, і він має бути вільним.',ePrice:'Ціна від 0.01 до 1000.',eNoDb:'Спільний сервер недоступний (потрібен вхід у claude.ai і право редагування).',oMk:'Монету створено',by:'від',you:'вас',online:'Онлайн',offline:'Лише ціни'},
+en:{banT:'Your account is banned',banDays:'Days left',banUntil:'Banned until',banReason:'Reason',perm:'permanent',banNote:'If you think this is a mistake, contact the administrator.',eFrozen:'ISAC froze your account due to suspicious activity.',eIsac:'ISAC blocked this action.',isacOn:'ISAC: account protected',isacFz:'ISAC: account frozen',prof:'Profile',dName:'Display name',save:'Save',joined:'Joined',trades:'Trades',rank:'Leaderboard rank',sec:'Two-factor authentication (2FA)',mfaOn:'2FA enabled',mfaOff:'2FA disabled',mfaEn:'Enable 2FA',mfaDis:'Disable 2FA',mfaScan:'Scan the QR code in Google Authenticator or Authy, then enter the 6-digit code.',code:'Code from app',confirmB:'Confirm',mfaLogin:'Enter your 2FA code',nameSaved:'Name saved',eFast:'Too fast, wait a moment.',eCoins:'Limit: 3 coins of your own.',eMfa:'2FA code required: sign in again.',eTaken:'That name is taken.',eBadName:'Name: 3–16 characters (letters, digits, _).',mfaDone:'2FA enabled',signIn:'Sign In',signUp:'Sign Up',signOut:'Sign Out',email:'Email',password:'Password (6+ characters)',lb:'Leaderboard',checkMail:'Check your email and confirm it, then sign in.',who:'Account',total:'Total assets',chart:'Chart',inv:'Investments',wallet:'Wallet',set:'Settings',wdTitle:'Withdraw to wallet',wdBtn:'Withdraw',all:'All',wdHint:'You can withdraw cash. Total assets is your cash and does not move with prices. Money in investments rises or falls until you sell it. Withdrawn funds stay under Withdrawn and can be moved back.',amount:'Amount in $',cash:'Cash',invested:'In investments',withdrawn:'Withdrawn',log:'Activity',noLog:'Nothing yet.',lang:'Language',theme:'Screen theme',tAuto:'Auto',tLight:'Light',tDark:'Dark',tf:'One candle',colors:'Chart colors',gUp:'Green — up',rUp:'Red — up',resetT:'Start the game over',resetB:'Reset',confirm:'Reset the game and start with $1000?',buy:'Buy',sell:'Sell',crypto:'Cryptocurrencies',firms:'Companies',user:'Player coins',own:'You hold',noInv:'You have not bought anything yet. Pick an asset in the Investments tab.',eAmt:'Enter an amount above zero.',eCash:'Not enough cash.',eHave:'You hold less of this asset.',oBuy:'Bought',oSell:'Sold',oWd:'Withdrew',rst:'Game reset.',eHint:'Some funds were withdrawn: move them back in the Chart tab.',capital:'Capital incl. withdrawn',back:'Move back to game',eWd:'Not enough funds in the wallet.',oBack:'Moved back',avail:'Available to withdraw',toAssetsT:'1. From investments to assets',toWalletT:'2. From assets to wallet',toAssets:'Move to assets',toHint:'Investments are sold proportionally at the current price.',oToA:'Moved to assets',eInv:'Only invested:',inInv:'In investments (price changes)',after:'Left after withdrawal',newCoin:'Create your own coin',cName:'Name',cTicker:'Ticker (2–5)',cPrice:'Start price $',cBtn:'Create for $50',cHint:'Every player will see your coin. Everyone sees the same chart.',eName:'Name: 2–20 characters.',eTick:'Ticker: 2–5 letters or digits, and it must be free.',ePrice:'Price from 0.01 to 1000.',eNoDb:'Shared server unavailable (sign in to claude.ai with edit access).',oMk:'Coin created',by:'by',you:'you',online:'Online',offline:'Prices only'}};
 const $=i=>document.getElementById(i);
 const esc=x=>String(x).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const fm=n=>'$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -125,21 +143,17 @@ const saveS=()=>{try{localStorage.setItem('ig2s',JSON.stringify(ST))}catch(e){}}
 const t=k=>D[ST.lang][k]||k;
 let AL=[],P={cash:0,wd:0},H={},LOG=[],USER=null,tab='chart',sel='BTC';
 const Q=id=>H[id]||0;
-/* Same price formula as the server (price_at in SQL) */
-const FQ=[.0003,.0011,.0047,.021,.09,.35,1.3,2.9],AM=[.5,.35,.25,.18,.12,.08,.05,.04];
-function pr(a,t){let x=0;for(let i=0;i<8;i++)x+=AM[i]*Math.sin(FQ[i]*t+a.ph[i]);return Math.max(a.p*.02,a.p*Math.exp(a.v*8*x))}
-const now=()=>Math.floor(Date.now()/1000);
-const px=a=>pr(a,now());
-function cndl(a,tf,n){const nw=now(),end=nw-nw%tf,out=[];for(let i=n-1;i>=0;i--){const st=end-i*tf,last=Math.min(st+tf-1,nw);let o=pr(a,st-1),c=pr(a,st),h=Math.max(o,c),l=Math.min(o,c);for(let k=st+1;k<=last;k++){c=pr(a,k);h=Math.max(h,c);l=Math.min(l,c)}out.push({o,h,l,c})}return out}
+let M={},C=[],busy=0;
+const px=a=>M[a.id]?M[a.id].p:0;
 const val=()=>AL.reduce((s,a)=>s+Q(a.id)*px(a),0);
 let tm;function toast(x){const m=$('msg');m.textContent=x;m.classList.add('show');clearTimeout(tm);tm=setTimeout(()=>m.classList.remove('show'),3500)}
 function log(x){LOG.unshift(new Date().toLocaleTimeString(ST.lang,{hour:'2-digit',minute:'2-digit'})+' · '+x);LOG=LOG.slice(0,50)}
 const owned=()=>AL.filter(a=>Q(a.id)>0);
-function em(m){m=m||'';return m.includes('not enough cash')?t('eCash'):m.includes('not enough asset')?t('eHave'):m.includes('not enough invested')?t('eInv'):m.includes('not enough in wallet')?t('eWd'):m.includes('ticker')?t('eTick'):m.includes('bad name')?t('eName'):m.includes('bad price')?t('ePrice'):m}
-async function call(name,args,ok){const{error}=await sb.rpc(name,args);if(error){toast(em(error.message));return false}await refresh();if(ok){log(ok);toast(ok)}return true}
+function em(m){m=m||'';if(m.includes('banned')){refresh();return t('banT')}return m.includes('frozen')?t('eFrozen'):m.includes('ISAC')?t('eIsac'):m.includes('too fast')?t('eFast'):m.includes('coin limit')?t('eCoins'):m.includes('mfa required')?t('eMfa'):m.includes('name taken')?t('eTaken'):m.includes('bad display')?t('eBadName'):m.includes('not enough cash')?t('eCash'):m.includes('not enough asset')?t('eHave'):m.includes('not enough invested')?t('eInv'):m.includes('not enough in wallet')?t('eWd'):m.includes('ticker')?t('eTick'):m.includes('bad name')?t('eName'):m.includes('bad price')?t('ePrice'):m}
+async function call(name,args,ok){const{error}=await sb.rpc(name,args);if(error){toast(em(error.message));return false}await refresh();poll();if(ok){log(ok);toast(ok)}return true}
 function chips(){if(!AL.length)return;const o=owned(),l=o.length?o:AL;if(!l.find(a=>a.id===sel))sel=l[0].id;
   $('chips').innerHTML=l.map(a=>`<button class="chip ${a.id===sel?'on':''}" data-id="${esc(a.id)}">${esc(a.id)}</button>`).join('')+(o.length?'':`<span class="sub" style="align-self:center">${t('noInv')}</span>`)}
-function chart(){const a=AL.find(x=>x.id===sel);if(!a)return;const cs=cndl(a,ST.tf,40),p=cs[cs.length-1].c;
+function chart(){const a=AL.find(x=>x.id===sel);if(!a)return;if(!C.length)return;const cs=C,p=cs[cs.length-1].c;
   let mn=Math.min(...cs.map(c=>c.l)),mx=Math.max(...cs.map(c=>c.h));const pd=(mx-mn)*.1||mx*.01;mn-=pd;mx+=pd;
   const W=640,H2=320,R=70,cw=(W-R)/cs.length,y=v=>H2-(v-mn)/(mx-mn)*H2;let g='';
   for(let i=1;i<5;i++){const v=mn+(mx-mn)*i/5,yy=y(v);g+=`<line x1="0" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="var(--line)"/><text x="${W-R+6}" y="${yy+4}" font-size="11" fill="var(--mute)">${fp(v)}</text>`}
@@ -155,20 +169,24 @@ function logv(){$('log').innerHTML=LOG.length?LOG.map(l=>`<div>${esc(l)}</div>`)
 async function lb(){const{data}=await sb.rpc('leaderboard');$('lb').innerHTML=(data||[]).map((r,i)=>`<div>${i+1}. ${esc(r.name)} — <b>${fm(+r.total)}</b></div>`).join('')}
 function invBuild(){const grp=(g,n)=>{const l=AL.filter(a=>a.g===g);return l.length?`<h3>${t(n)}</h3>`+l.map(a=>`<div class="asset"><div class="ah"><div><b>${esc(a.n)}</b> <span class="sub">${esc(a.id)}</span><div class="sub" id="o-${esc(a.id)}"></div></div><div class="r"><b id="p-${esc(a.id)}"></b><div id="c-${esc(a.id)}"></div></div></div><div class="ctl"><input type="number" min="0" step="any" inputmode="decimal" id="i-${esc(a.id)}" placeholder="${t('amount')}"><button class="b buy" data-a="buy" data-id="${esc(a.id)}">${t('buy')}</button><button class="b sell" data-a="sell" data-id="${esc(a.id)}">${t('sell')}</button></div></div>`).join(''):''};
   $('invList').innerHTML=grp('c','crypto')+grp('k','firms')+grp('u','user');invLive()}
-function invLive(){const n=now();AL.forEach(a=>{const e=$('c-'+a.id);if(!e)return;const p=pr(a,n),ch=(p/pr(a,n-300)-1)*100;$('p-'+a.id).textContent=fp(p);e.textContent=(ch>=0?'+':'')+ch.toFixed(2)+'% (5m)';e.className=ch>=0?'up':'dn';
+function invLive(){AL.forEach(a=>{const e=$('c-'+a.id);if(!e||!M[a.id])return;const p=M[a.id].p,ch=(p/M[a.id].p5-1)*100;$('p-'+a.id).textContent=fp(p);e.textContent=(ch>=0?'+':'')+ch.toFixed(2)+'% (5m)';e.className=ch>=0?'up':'dn';
   $('o-'+a.id).textContent=Q(a.id)>0?`${t('own')}: ${Q(a.id).toFixed(6)} ≈ ${fm(Q(a.id)*p)}`:''})}
 function live(){stats();if(tab==='chart')chart();if(tab==='inv')invLive()}
-async function refresh(){if(!USER)return;const[a,p,h]=await Promise.all([sb.from('assets').select('*'),sb.from('profiles').select('cash,wd').maybeSingle(),sb.from('holdings').select('asset_id,qty')]);
+function showBan(p){let on=false;if(p.frozen){const perm=!p.ban_until||p.ban_until==='infinity',end=perm?null:new Date(p.ban_until);on=perm||end>new Date();
+  if(on){$('bD').textContent=perm?t('perm'):Math.max(1,Math.ceil((end-new Date())/864e5));$('bU').textContent=perm?t('perm'):end.toLocaleString(ST.lang,{dateStyle:'medium',timeStyle:'short'});$('bR').textContent=p.ban_reason||'—'}}
+  $('ban').classList.toggle('on',on)}
+$('bOut').onclick=()=>sb.auth.signOut();
+async function refresh(){if(!USER)return;const[a,p,h]=await Promise.all([sb.from('assets').select('*'),sb.from('profiles').select('cash,wd,frozen,ban_until,ban_reason').maybeSingle(),sb.from('holdings').select('asset_id,qty')]);
   if(a.data){const n=AL.length;AL=a.data.map(r=>({id:r.id,n:r.name,g:r.grp,p:r.base,v:r.vol,ph:r.ph}));if(AL.length!==n||!$('invList').children.length)invBuild();chips()}
-  if(p.data)P={cash:+p.data.cash,wd:+p.data.wd};
+  if(p.data){P={cash:+p.data.cash,wd:+p.data.wd};showBan(p.data)}
   if(h.data){H={};h.data.forEach(r=>H[r.asset_id]=+r.qty)}
   live()}
 function lang(){document.documentElement.lang=ST.lang;document.querySelectorAll('[data-i]').forEach(e=>e.textContent=t(e.dataset.i));document.querySelectorAll('[data-ip]').forEach(e=>e.placeholder=t(e.dataset.ip));
   document.title=ST.lang==='uk'?'Інвест-пісочниця':'Invest Sandbox';invBuild();chips();logv();live()}
 function theme(){const r=document.documentElement;ST.theme==='auto'?r.removeAttribute('data-theme'):r.dataset.theme=ST.theme;r.dataset.rg=ST.rg}
-function show(n){tab=n;document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===n));document.querySelectorAll('section').forEach(x=>x.classList.toggle('on',x.id==='s-'+n));if(n==='chart')chips();if(n==='wallet'){logv();lb()}live()}
+function show(n){tab=n;document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===n));document.querySelectorAll('section').forEach(x=>x.classList.toggle('on',x.id==='s-'+n));if(n==='chart')chips();if(n==='wallet'){logv();lb()}if(n==='prof')prof();live()}
 $('nav').onclick=e=>{const b=e.target.closest('button');if(b)show(b.dataset.t)};
-$('chips').onclick=e=>{const b=e.target.closest('.chip');if(b){sel=b.dataset.id;chips();chart()}};
+$('chips').onclick=e=>{const b=e.target.closest('.chip');if(b){sel=b.dataset.id;C=[];chips();poll()}};
 const num=el=>{const v=parseFloat(el.value);if(!(v>0&&isFinite(v))){toast(t('eAmt'));return null}return v};
 $('invList').onclick=async e=>{const b=e.target.closest('[data-a]');if(!b)return;const id=b.dataset.id,inp=$('i-'+id),v=num(inp);if(v==null)return;const buy=b.dataset.a==='buy';
   if(await call(buy?'buy':'sell',{aid:id,amt:v},`${t(buy?'oBuy':'oSell')} ${id}: ${fm(v)}`))inp.value=''};
@@ -182,7 +200,7 @@ $('mkBtn').onclick=async()=>{const nm=$('mkN').value.trim(),id=$('mkT').value.tr
   if(await call('create_coin',{tkr:id,nm,startp:p},`${t('oMk')}: ${id}`))$('mkN').value=$('mkT').value=$('mkP').value=''};
 $('sLang').onchange=e=>{ST.lang=e.target.value;saveS();lang()};
 $('sTheme').onchange=e=>{ST.theme=e.target.value;saveS();theme()};
-$('sTf').onchange=e=>{ST.tf=+e.target.value;saveS()};
+$('sTf').onchange=e=>{ST.tf=+e.target.value;saveS();C=[];poll()};
 $('sRg').onchange=e=>{ST.rg=+e.target.value;saveS();theme()};
 $('reset').onclick=async()=>{if(confirm(t('confirm'))&&await call('reset_game',{}))toast(t('rst'))};
 $('out').onclick=()=>sb.auth.signOut();
@@ -190,13 +208,30 @@ async function auth(up){const email=$('aE').value.trim(),password=$('aP').value;
   const r=up?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
   if(r.error)$('aM').textContent=r.error.message;else if(up&&!r.data.session)$('aM').textContent=t('checkMail')}
 $('aIn').onclick=()=>auth(false);$('aUp').onclick=()=>auth(true);
-function setUser(s){USER=s&&s.user||null;$('auth').classList.toggle('on',!USER);if(USER){$('who').textContent=USER.email;refresh()}else{H={};P={cash:0,wd:0};AL=[];$('invList').innerHTML='';LOG=[]}}
+async function poll(){if(!USER||busy)return;busy=1;try{const[m,c]=await Promise.all([sb.rpc('market'),AL.length?sb.rpc('candles',{aid:sel,tf:ST.tf,n:41}):Promise.resolve({})]);
+  if(m.data){M={};m.data.forEach(r=>M[r.id]={p:r.price,p5:r.p5||r.price})}
+  if(c.data&&c.data.length){let pc=null;C=c.data.slice(-40).map(r=>{const o=pc==null?r.o:pc;pc=r.c;return{o,h:Math.max(r.h,o),l:Math.min(r.l,o),c:r.c}})}
+  live()}catch(e){}busy=0}
+async function prof(){const{data}=await sb.from('profiles').select('name,created_at,frozen').maybeSingle();if(!data)return;$('pN').value=data.name;$('pI').textContent='🛡 '+t(data.frozen?'isacFz':'isacOn');$('pI').className='sub '+(data.frozen?'dn':'up');$('pJ').textContent=new Date(data.created_at).toLocaleDateString(ST.lang);$('pEm').textContent=USER.email;
+  const c=await sb.from('trades').select('*',{count:'exact',head:true});$('pT').textContent=c.count||0;
+  const l=await sb.rpc('leaderboard');if(l.data){const i=l.data.findIndex(r=>r.name===data.name);$('pR').textContent=i<0?'—':'#'+(i+1)}}
+$('pSave').onclick=async()=>{if(await call('set_name',{nm:$('pN').value.trim()},t('nameSaved')))prof()};
+async function mfaStatus(){const f=await sb.auth.mfa.listFactors();const on=!!(f.data&&f.data.totp&&f.data.totp.length);$('mS').textContent=t(on?'mfaOn':'mfaOff');$('mEn').style.display=on?'none':'';$('mDis').style.display=on?'':'none';$('mBox').innerHTML=''}
+$('mEn').onclick=async()=>{const r=await sb.auth.mfa.enroll({factorType:'totp'});if(r.error)return toast(r.error.message);const fid=r.data.id;
+  $('mBox').innerHTML=`<p class="sub">${t('mfaScan')}</p><img alt="QR" src="${esc(r.data.totp.qr_code)}" style="width:180px;height:180px;background:#fff;padding:6px;border-radius:8px"><div class="sub" style="word-break:break-all;margin:6px 0">${esc(r.data.totp.secret)}</div><div class="ctl" style="grid-template-columns:1fr auto"><input id="mV" inputmode="numeric" maxlength="6" placeholder="${t('code')}"><button class="b wd" id="mOk">${t('confirmB')}</button></div>`;
+  $('mOk').onclick=async()=>{const ch=await sb.auth.mfa.challenge({factorId:fid});if(ch.error)return toast(ch.error.message);const v=await sb.auth.mfa.verify({factorId:fid,challengeId:ch.data.id,code:$('mV').value.trim()});if(v.error)return toast(v.error.message);toast(t('mfaDone'));mfaStatus()}};
+$('mDis').onclick=async()=>{const f=await sb.auth.mfa.listFactors();const x=f.data&&f.data.totp&&f.data.totp[0];if(x){const r=await sb.auth.mfa.unenroll({factorId:x.id});if(r.error)toast(r.error.message)}mfaStatus()};
+$('mBtn').onclick=async()=>{$('mM').textContent='';const f=await sb.auth.mfa.listFactors(),x=f.data&&f.data.totp&&f.data.totp[0];if(!x)return;const ch=await sb.auth.mfa.challenge({factorId:x.id});if(ch.error){$('mM').textContent=ch.error.message;return}
+  const v=await sb.auth.mfa.verify({factorId:x.id,challengeId:ch.data.id,code:$('mC').value.trim()});if(v.error){$('mM').textContent=v.error.message;return}$('mC').value='';setUser((await sb.auth.getSession()).data.session)};
+$('mOut').onclick=()=>sb.auth.signOut();
+async function setUser(s){USER=s&&s.user||null;if(USER){const{data:l}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();if(l&&l.nextLevel==='aal2'&&l.currentLevel!=='aal2'){$('auth').classList.remove('on');$('mfa').classList.add('on');return}}
+  $('mfa').classList.remove('on');$('auth').classList.toggle('on',!USER);if(USER){$('who').textContent=USER.email;await refresh();poll();prof();mfaStatus()}else{$('ban').classList.remove('on');H={};P={cash:0,wd:0};AL=[];$('invList').innerHTML='';LOG=[]}}
 $('sLang').value=ST.lang;$('sTheme').value=ST.theme;$('sTf').value=ST.tf;$('sRg').value=ST.rg;
 theme();lang();
 sb.auth.getSession().then(({data})=>setUser(data.session));
 sb.auth.onAuthStateChange((_e,s)=>setUser(s));
 sb.channel('assets-live').on('postgres_changes',{event:'*',schema:'public',table:'assets'},()=>refresh()).subscribe();
-setInterval(live,1000);setInterval(()=>{if(USER){refresh();if(tab==='wallet')lb()}},15000);
+setInterval(live,1000);setInterval(poll,2000);setInterval(()=>{if(USER){refresh();if(tab==='wallet')lb()}},15000);
 })();
 </script>
 </body>
