@@ -204,12 +204,13 @@ function invBuild(){const grp=(g,n)=>{const l=AL.filter(a=>a.g===g);return l.len
   $('invList').innerHTML=grp('c','crypto')+grp('k','firms')+grp('u','user');invLive()}
 function invLive(){AL.forEach(a=>{const e=$('c-'+a.id);if(!e||!M[a.id])return;const p=M[a.id].p,ch=(p/M[a.id].p5-1)*100;$('p-'+a.id).textContent=fp(p);e.textContent=(ch>=0?'+':'')+ch.toFixed(2)+'% (5m)';e.className=ch>=0?'up':'dn';
   $('o-'+a.id).textContent=Q(a.id)>0?`${t('own')}: ${Q(a.id).toFixed(6)} ≈ ${fm(Q(a.id)*p)}`:''})}
-function live(){stats();if(tab==='chart')chart();if(tab==='inv')invLive()}
+function live(){if(HALT)return;stats();if(tab==='chart')chart();if(tab==='inv')invLive()}
 function showBan(p){let on=false;if(p.frozen){const perm=!p.ban_until||p.ban_until==='infinity',end=perm?null:new Date(p.ban_until);on=perm||end>new Date();
   if(on){$('bD').textContent=perm?t('perm'):Math.max(1,Math.ceil((end-new Date())/864e5));$('bU').textContent=perm?t('perm'):end.toLocaleString(ST.lang,{dateStyle:'medium',timeStyle:'short'});$('bR').textContent=p.ban_reason||'—'}}
-  $('ban').classList.toggle('on',on)}
+  if(on){$('ban').classList.add('on');gate('ban')}else{$('ban').classList.remove('on');if(GATE==='ban')location.reload()}}
 $('bOut').onclick=leave;
 async function refresh(){if(!USER)return;const[a,p,h]=await Promise.all([sb.from('assets').select('*'),sb.from('profiles').select('*').maybeSingle(),sb.from('holdings').select('asset_id,qty')]);
+  if(HALT){if(p.data)showBan(p.data);return}
   if(a.data){const n=AL.length;AL=a.data.map(r=>({id:r.id,n:r.name,g:r.grp,p:r.base,v:r.vol,ph:r.ph}));if(AL.length!==n||!$('invList').children.length)invBuild();chips()}
   if(p.error)toast(p.error.message);if(p.data){P={cash:+p.data.cash,wd:+p.data.wd};showBan(p.data);ME=p.data;onMe()}
   if(h.data){H={};h.data.forEach(r=>H[r.asset_id]=+r.qty)}
@@ -241,8 +242,9 @@ async function auth(up){const email=$('aE').value.trim(),password=$('aP').value;
   const r=up?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
   if(r.error)$('aM').textContent=r.error.message;else if(up&&!r.data.session)$('aM').textContent=t('checkMail')}
 $('aIn').onclick=()=>auth(false);$('aUp').onclick=()=>auth(true);
-async function poll(){if(!USER||busy)return;busy=1;try{const[m,c]=await Promise.all([sb.rpc('market'),AL.length?sb.rpc('candles',{aid:sel,tf:ST.tf,n:41}):Promise.resolve({})]);
+async function poll(){if(!USER||busy||HALT)return;busy=1;try{const[m,c]=await Promise.all([sb.rpc('market'),AL.length?sb.rpc('candles',{aid:sel,tf:ST.tf,n:41}):Promise.resolve({})]);
   if(m.error&&netFail(m.error.message)){NF++;if(NF>=2||!navigator.onLine)showErr(navigator.onLine?'srv':'off')}else{NF=0;if(ERR==='off'||ERR==='srv')hideErr()}
+  if(m.error&&/banned/.test(m.error.message))refresh();else if(m.error&&/maintenance/.test(m.error.message))loadSettings();
   if(m.data){M={};m.data.forEach(r=>M[r.id]={p:r.price,p5:r.p5||r.price})}
   if(c.data&&c.data.length){let pc=null;C=c.data.slice(-40).map(r=>{const o=pc==null?r.o:pc;pc=r.c;return{o,h:Math.max(r.h,o),l:Math.min(r.l,o),c:r.c}})}
   live()}catch(e){}busy=0}
@@ -259,7 +261,7 @@ $('mBtn').onclick=async()=>{$('mM').textContent='';const f=await sb.auth.mfa.lis
   const v=await sb.auth.mfa.verify({factorId:x.id,challengeId:ch.data.id,code:$('mC').value.trim()});if(v.error){$('mM').textContent=v.error.message;return}$('mC').value='';setUser((await sb.auth.getSession()).data.session)};
 $('mOut').onclick=leave;
 async function setUser(s){USER=s&&s.user||null;if(USER){const{data:l}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();if(l&&l.nextLevel==='aal2'&&l.currentLevel!=='aal2'){$('auth').classList.remove('on');$('mfa').classList.add('on');return}}
-  $('mfa').classList.remove('on');$('auth').classList.toggle('on',!USER);if(USER){$('who').textContent=USER.email;await refresh();poll();prof();mfaStatus();ping()}else{hideErr();ME=null;DK='';DL=[];FL=[];$('ban').classList.remove('on');$('maint').classList.remove('on');H={};P={cash:0,wd:0};AL=[];$('invList').innerHTML='';LOG=[]}}
+  $('mfa').classList.remove('on');$('auth').classList.toggle('on',!USER);if(USER){if(HALT){refresh();return}$('who').textContent=USER.email;await refresh();poll();prof();mfaStatus();ping()}else{if(GATE){location.reload();return}hideErr();ME=null;DK='';DL=[];FL=[];$('ban').classList.remove('on');$('maint').classList.remove('on');H={};P={cash:0,wd:0};AL=[];$('invList').innerHTML='';LOG=[]}}
 
 /* ===== Trades, friends, admin, maintenance ===== */
 let ME=null,DL=[],FL=[],DK='';
@@ -268,9 +270,9 @@ const idv=el=>el.value.trim().toUpperCase();
 function onMe(){if(!ME)return;$('myPid').textContent=ME.pid||'';$('navAdmin').style.display=ME.is_admin?'':'none';loadSettings()}
 async function loadSettings(){const{data}=await sb.from('app_settings').select('*');if(!data)return;
   const m=(data.find(x=>x.key==='maintenance')||{}).value||{},a=(data.find(x=>x.key==='announcement')||{}).value||{};
-  $('maint').classList.toggle('on',!!(m.on&&USER&&ME&&!ME.is_admin));$('maintM').textContent=m.msg||'';
-  $('ann').style.display=a.text?'block':'none';$('ann').textContent=a.text||'';
-  if(ME&&ME.is_admin)$('aMS').textContent=t(m.on?'maintIsOn':'maintIsOff')}
+  const blk=!!(m.on&&USER&&ME&&!ME.is_admin);$('maintM').textContent=m.msg||'';if(blk){$('maint').classList.add('on');gate('maint')}else{$('maint').classList.remove('on');if(GATE==='maint')location.reload()}
+  const an=$('ann');if(an){an.style.display=a.text?'block':'none';an.textContent=a.text||''}
+  if(ME&&ME.is_admin&&$('aMS'))$('aMS').textContent=t(m.on?'maintIsOn':'maintIsOff')}
 $('maOut').onclick=leave;
 $('cpPid').onclick=async()=>{try{await navigator.clipboard.writeText(ME.pid);toast(t('copied'))}catch(e){toast(ME.pid)}};
 /* trades */
@@ -284,7 +286,7 @@ function renderDeals(){const c=$('dList');if(!c)return;if(c.contains(document.ac
     if(open)h+=`<div class="sub" style="margin-top:8px">${d.mine_ok?t('youOk'):''} ${d.their_ok?t('theyOk'):''}</div><div class="row"><button class="b buy" data-act="ok" data-d="${d.id}"${d.mine_ok?' disabled':''}>${t('confirmB')}</button><button class="b sell" data-act="cancel" data-d="${d.id}">${t('cancelB')}</button></div>`;
     else if(d.status==='done')h+=d.reported?`<div class="sub" style="margin-top:8px">${t('reported')}</div>`:`<div class="row"><button class="q" data-act="repBox" data-d="${d.id}">⚠ ${t('report')}</button></div><div id="rb-${d.id}" style="display:none"><input id="rt-${d.id}" maxlength="500" placeholder="${t('reportTxt')}" style="margin-top:8px"><div class="row"><button class="b wd" data-act="rep" data-d="${d.id}">${t('send')}</button></div></div>`;
     return h+'</div>'}).join(''):`<div class="card sub">${t('noDeals')}</div>`}
-async function loadDeals(force){if(!USER)return;const{data,error}=await sb.rpc('deals_list');if(error||!data)return;
+async function loadDeals(force){if(!USER||HALT)return;const{data,error}=await sb.rpc('deals_list');if(error||!data)return;
   $('bgD').textContent=data.filter(d=>d.status==='open').length||'';const k=JSON.stringify(data);if(!force&&k===DK)return;DK=k;DL=data;renderDeals()}
 $('dNew').onclick=async()=>{const v=idv($('dPid'));if(v&&await rp('deal_create',{opid:v},t('dealStarted'))){$('dPid').value='';loadDeals(true)}};
 $('dList').onclick=async e=>{const b=e.target.closest('[data-act]');if(!b)return;const d=b.dataset.d,a=b.dataset.act;
@@ -303,7 +305,7 @@ function renderFriends(){const c=$('fList');if(!c)return;const g=x=>FL.filter(f=
   h+=`<h3>${t('fFriends')}</h3>`+(g('friend').length?g('friend').map(f=>row(f,bt('tr',f.pid,'trade','b buy')+bt('rem',f.pid,'remove'))).join(''):`<div class="sub">${t('noFriends')}</div>`);
   if(g('outgoing').length)h+=`<h3>${t('fOut')}</h3>`+g('outgoing').map(f=>row(f,bt('rem',f.pid,'cancelB'))).join('');
   c.innerHTML=h}
-async function loadFriends(){if(!USER)return;const{data,error}=await sb.rpc('friends_list');if(error||!data)return;FL=data;$('bgF').textContent=FL.filter(f=>f.state==='incoming').length||'';renderFriends()}
+async function loadFriends(){if(!USER||HALT)return;const{data,error}=await sb.rpc('friends_list');if(error||!data)return;FL=data;$('bgF').textContent=FL.filter(f=>f.state==='incoming').length||'';renderFriends()}
 $('fAdd').onclick=async()=>{const v=idv($('fPid'));if(v&&await rp('friend_request',{fpid:v},t('fAdded'))){$('fPid').value='';loadFriends()}};
 $('fList').onclick=async e=>{const b=e.target.closest('[data-act]');if(!b)return;const p=b.dataset.p,a=b.dataset.act;
   if(a==='acc'){if(await rp('friend_respond',{fpid:p,accept:true}))loadFriends()}
@@ -347,7 +349,7 @@ const dk=(()=>{try{let k=localStorage.getItem('ig_dk');if(!k){k=(crypto.randomUU
 function devInfo(){const u=navigator.userAgent;const os=/Windows/.test(u)?'Windows':/Android/.test(u)?'Android':/iPhone|iPad/.test(u)?'iOS':/Mac/.test(u)?'macOS':/Linux/.test(u)?'Linux':'?';
   let b,k='web';if(/Electron\//.test(u)){b='App';k='exe'}else if(window.Capacitor||/; wv\)/.test(u)){b='App';k='apk'}else b=/Edg\//.test(u)?'Edge':/OPR\//.test(u)?'Opera':/Firefox\//.test(u)?'Firefox':/Chrome\//.test(u)?'Chrome':/Safari\//.test(u)?'Safari':'Browser';
   return{n:b+' · '+os,k}}
-async function ping(){if(!USER||ERR==='rev')return;const{n,k}=devInfo();const{data,error}=await sb.rpc('device_ping',{dkey:dk,dname:n,dkind:k});
+async function ping(){if(!USER||ERR==='rev'||HALT)return;const{n,k}=devInfo();const{data,error}=await sb.rpc('device_ping',{dkey:dk,dname:n,dkind:k});
   if(error){if(netFail(error.message)&&!navigator.onLine)showErr('off');return}
   if(data&&data.error==='session revoked')return showErr('rev');
   if(data&&data.active===false)showErr('other',data.other);else if(ERR==='other'){hideErr();refresh();poll()}}
@@ -363,12 +365,23 @@ $('dmOk').onclick=async()=>{const f=await sb.auth.mfa.listFactors(),x=f.data&&f.
   const v=await sb.auth.mfa.verify({factorId:x.id,challengeId:ch.data.id,code:$('dmC').value.trim()});if(v.error){$('dmM').textContent=v.error.message;return}
   const{error}=await sb.rpc('device_remove',{did:DM});$('dm').classList.remove('on');if(error)return toast(em(error.message));toast(t('devRemoved'));loadDevices()};
 
+
+/* ===== Gate: ban / maintenance cannot be removed from the page ===== */
+let HALT=false,GATE=null;
+const GN={ban:$('ban'),maint:$('maint')};
+function gate(kind){if(GATE===kind)return;GATE=kind;HALT=true;
+  for(const n of ['header','main']){const e=document.querySelector(n);if(e)e.remove()}}   // під екраном бану немає ні даних, ні інтерфейсу
+function guardGate(){if(!GATE)return;const el=GN[GATE];if(!document.body.contains(el)){location.reload();return}
+  const c=getComputedStyle(el);if(c.display!=='flex'||c.visibility!=='visible'||Number(c.opacity)<0.9)location.reload()}
+new MutationObserver(guardGate).observe(document.documentElement,{childList:true,subtree:true,attributes:true});
+setInterval(guardGate,700);
+
 $('sLang').value=ST.lang;$('sTheme').value=ST.theme;$('sTf').value=ST.tf;$('sRg').value=ST.rg;
 theme();lang();
 sb.auth.getSession().then(({data})=>setUser(data.session));
 sb.auth.onAuthStateChange((_e,s)=>setUser(s));
 sb.channel('assets-live').on('postgres_changes',{event:'*',schema:'public',table:'assets'},()=>refresh()).subscribe();
-setInterval(live,1000);setInterval(ping,10000);setInterval(poll,2000);setInterval(()=>{loadSettings();if(USER){loadDeals();loadFriends()}},8000);setInterval(()=>{if(USER){refresh();if(tab==='wallet')lb()}},15000);
+setInterval(live,1000);setInterval(ping,10000);setInterval(poll,2000);setInterval(()=>{loadSettings();if(USER){if(HALT)refresh();else{loadDeals();loadFriends()}}},8000);setInterval(()=>{if(USER){refresh();if(tab==='wallet')lb()}},15000);
 })();
 </script>
 </body>
